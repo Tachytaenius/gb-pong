@@ -1,3 +1,3 @@
-# game-boy-n-body
+# Game Boy Pong
 
-N-body sim on the Game Boy
+sm83 asm practise
