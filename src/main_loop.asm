@@ -244,13 +244,28 @@ HandleBallMovement:
 	; Ball pos y high byte is in a
 	cp SCRN_Y
 	ret c ; Return if not over height
-	jp .invertYVelocity
+	call .invertYVelocity
+	; We shouldn't actually be above game height, so set pos y to it
+	; This may help with keeping the maths in ball pos prediction in order
+	xor a
+	ld [wBallPos.y], a
+	ld a, SCRN_Y
+	ld [wBallPos.y + 1], a
+	ret
+
 .negative
 	call .addVelYToPosY
 	; Check if we went under 0 and invert y vel if so
 	; Carry is preserved from previous addition
 	ret c
-	; Fallthrough
+	call .invertYVelocity
+	; We shouldn't actually be below game height, so set pos y to zero
+	; This helps with keeping the maths in ball pos prediction in order
+	xor a
+	ld [wBallPos.y], a
+	ld [wBallPos.y + 1], a
+	ret
+
 .invertYVelocity
 	ld a, [wBallVelY]
 	cpl
