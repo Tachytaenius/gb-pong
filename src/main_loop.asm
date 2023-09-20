@@ -116,6 +116,110 @@ HandleLeftPaddleMovement:
 	ret
 
 HandleRightPaddleMovement:
+	call .predictBallPos ; TODO: Do this on a timer, and fudge it
+
+	; Set hl to paddle pos
+	ld a, [wRightPaddlePos]
+	ld l, a
+	ld a, [wRightPaddlePos + 1]
+	ld h, a
+	; Set de to paddle target pos
+	ld a, [wRightPaddleTargetPos]
+	ld e, a
+	ld a, [wRightPaddleTargetPos + 1]
+	ld d, a
+	; Go upwards with -speed if hl + half paddle (paddle middle) > de (target pos), else go downwards
+	; I feel it's likely that this comparison is badly-written
+	ld bc, PADDLE_HEIGHT_HALF
+	push hl
+	add hl, bc
+	ld a, l
+	sub e
+	ld a, h
+	sbc d
+	pop hl
+	jr nc, .upwards
+
+	; Downwards (add to hl)
+	ld bc, PADDLE_SPEED
+	add hl, bc
+	; Check if hl + PADDLE_HEIGHT_HALF > (or =) target pos and set paddle pos to target pos - PADDLE_HEIGHT_HALF if it is
+	; The following implementation is surely bad
+	ld bc, PADDLE_HEIGHT_HALF
+	push hl
+	add hl, bc
+	push de
+	ld a, e
+	cpl
+	add 1
+	ld e, a
+	ld a, d
+	cpl
+	adc 0
+	ld d, a
+	add hl, de ; Sub pre-push de to compare it with hl
+	pop de
+	pop hl
+	call c, .putPaddleOnTargetInHl
+	; Check if hl is > (or =) game height and set paddle pos to LOWEST_PADDLE_POS if so
+	ld a, l
+	sub LOW(LOWEST_PADDLE_POS)
+	ld a, h
+	sbc HIGH(LOWEST_PADDLE_POS)
+	jr c, :+
+	; hl too big
+	ld hl, LOWEST_PADDLE_POS
+:
+	; Done! Set right paddle pos to hl
+	ld a, l
+	ld [wRightPaddlePos], a
+	ld a, h
+	ld [wRightPaddlePos + 1], a
+	ret
+
+.upwards ; Sub from hl
+	ld bc, -PADDLE_SPEED
+	add hl, bc
+	; If we underflowed from the subtraction, set hl to 0
+	jr c, :+
+	ld hl, 0
+:
+	; Is hl + PADDLE_HEIGHT_HALF < target pos? If it is, set paddle pos to target pos - PADDLE_HEIGHT HALF
+	; The following implementation is surely bad
+	ld bc, PADDLE_HEIGHT_HALF
+	push hl
+	add hl, bc
+	push de
+	ld a, e
+	cpl
+	add 1
+	ld e, a
+	ld a, d
+	cpl
+	adc 0
+	ld d, a
+	add hl, de ; Sub pre-push de to compare it with hl
+	pop de
+	pop hl
+	call nc, .putPaddleOnTargetInHl
+	; No need to check if hl is bigger than LOWEST_PADDLE_POS
+	; Done! Set right paddle pos to hl
+	ld a, l
+	ld [wRightPaddlePos], a
+	ld a, h
+	ld [wRightPaddlePos + 1], a
+	ret
+
+.putPaddleOnTargetInHl
+	ld a, [wRightPaddleTargetPos]
+	sub LOW(PADDLE_HEIGHT_HALF)
+	ld l, a
+	ld a, [wRightPaddleTargetPos + 1]
+	sub HIGH(PADDLE_HEIGHT_HALF)
+	ld h, a
+	ret nc
+	; Underflowed
+	ld hl, 0
 	ret
 
 .predictBallPos
