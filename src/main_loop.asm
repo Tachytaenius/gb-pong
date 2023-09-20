@@ -148,7 +148,7 @@ HandleRightPaddleMovement:
 	ld bc, PADDLE_HEIGHT_HALF
 	push hl
 	add hl, bc
-	push de
+	; push de ; Won't get used again
 	ld a, e
 	cpl
 	add 1
@@ -157,8 +157,8 @@ HandleRightPaddleMovement:
 	cpl
 	adc 0
 	ld d, a
-	add hl, de ; Sub pre-push de to compare it with hl
-	pop de
+	add hl, de ; Sub target pos to compare it with hl
+	; pop de
 	pop hl
 	call c, .putPaddleOnTargetInHl
 	; Check if hl is > (or =) game height and set paddle pos to LOWEST_PADDLE_POS if so
@@ -189,7 +189,7 @@ HandleRightPaddleMovement:
 	ld bc, PADDLE_HEIGHT_HALF
 	push hl
 	add hl, bc
-	push de
+	; push de ; Won't get used again
 	ld a, e
 	cpl
 	add 1
@@ -199,7 +199,7 @@ HandleRightPaddleMovement:
 	adc 0
 	ld d, a
 	add hl, de ; Sub pre-push de to compare it with hl
-	pop de
+	; pop de
 	pop hl
 	call nc, .putPaddleOnTargetInHl
 	; No need to check if hl is bigger than LOWEST_PADDLE_POS
