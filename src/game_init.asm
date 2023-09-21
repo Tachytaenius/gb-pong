@@ -34,9 +34,9 @@ GameInit::
 	ld [wLeftPaddlePos + 1], a
 	ld [wRightPaddlePos + 1], a
 
-	ld a, LOW(DEFAULT_PADDLE_POS)
+	ld a, LOW(DEFAULT_TARGET_POS)
 	ld [wRightPaddleTargetPos], a
-	ld a, HIGH(DEFAULT_PADDLE_POS)
+	ld a, HIGH(DEFAULT_TARGET_POS)
 	ld [wRightPaddleTargetPos + 1], a
 
 	; Load tileset
