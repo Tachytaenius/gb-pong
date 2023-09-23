@@ -11,7 +11,26 @@ GameInit::
 	ld [wLeftScore], a
 	ld [wRightScore], a
 
-	; xor a
+	call Serve
+
+	; Load tileset
+	ld bc, TilesetGraphics.end - TilesetGraphics
+	ld hl, TilesetGraphics
+	ld de, _VRAM
+	call CopyBytes
+
+	; Clear background
+	ld bc, SCRN_VX_B * SCRN_Y_B ; Not SCRN_VY_B (for speed)
+	ld hl, _SCRN0
+	xor a
+	call FillBytes
+
+	call UpdateSprites ; Since we start paused
+
+	ret
+
+Serve::
+	xor a
 	ld [wBallPos.x], a
 	ld a, SCRN_X / 2
 	ld [wBallPos.x + 1], a
@@ -38,19 +57,5 @@ GameInit::
 	ld [wRightPaddleTargetPos], a
 	ld a, HIGH(DEFAULT_TARGET_POS)
 	ld [wRightPaddleTargetPos + 1], a
-
-	; Load tileset
-	ld bc, TilesetGraphics.end - TilesetGraphics
-	ld hl, TilesetGraphics
-	ld de, _VRAM
-	call CopyBytes
-
-	; Clear background
-	ld bc, SCRN_VX_B * SCRN_Y_B ; Not SCRN_VY_B (for speed)
-	ld hl, _SCRN0
-	xor a
-	call FillBytes
-
-	call UpdateSprites ; Since we start paused
 
 	ret

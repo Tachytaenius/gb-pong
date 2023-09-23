@@ -22,13 +22,9 @@ wBallVelY:: ; 8.8 signed
 
 wLeftPaddlePos:: ; 8.8 unsigned
 	ds 2
-wLeftPaddleHeight:: ; 8 unsigned
-	ds 1
 
 wRightPaddlePos:: ; 8.8 unsigned
 	ds 2
-wRightPaddleHeight:: ; 8 unsigned
-	ds 1
 
 wRightPaddleTargetPos:: ; 8.8 unsigned
 	ds 2
@@ -303,9 +299,58 @@ HandleBallMovement:
 	sbc HIGH(BALL_SPEED_X)
 	ld [wBallPos.x + 1], a
 	; Did we go below 0?
-	jr nc, .doneX
-	; TODO: Hit a paddle?
-	; For now we just assume we did and don't do the y vel change
+	jp nc, .y
+
+	; Did we hit the left paddle?
+	; Get ball y - paddle top in hl
+	; Put paddle top in hl and deref hl
+	ld hl, wLeftPaddlePos
+	ld a, [hl+]
+	ld h, [hl]
+	ld l, a
+	; Perform subtraction and put result in hl
+	ld a, [wBallPos.y]
+	sub l
+	ld l, a
+	ld a, [wBallPos.y + 1]
+	sbc h
+	ld h, a
+	; hl is now ballPos.y - leftPaddlePos
+	; Check its magnitude against paddle height (if negative, which is also a miss, it will be greater than)
+	ld bc, PADDLE_HEIGHT_NEGATIVE - 1 ; We are checking if hl <= PADDLE_HEIGHT with nc
+	push hl ; Used again if paddle is hit
+	add hl, bc
+	pop hl
+	jr nc, .hitPaddleLeft
+
+	; Missed paddle
+	ld a, [wRightScore]
+	inc a
+	; Don't increment over max value
+	jr nz, :+
+	ld a, $FF
+:
+	ld [wRightScore], a
+	jp Serve
+
+.hitPaddleLeft
+	; hl, which is where the ball y is on the paddle, can be used to get new ballVelY
+	; First we subtract paddle height half
+	ld bc, PADDLE_HEIGHT_HALF_NEGATIVE
+	add hl, bc
+	; Now we divide it by paddle height half (so it is from -1 to 1) and multiply by max ball velocity y magnitude in one multiplication
+	ld c, l
+	ld b, h
+	ld de, BALL_VELOCITY_Y_CALC_MULTIPLIER
+	call MulBcByDeInDehlSigned
+	; dehl: desired y velocity as 16.16 fixed point
+	; We only want the middle two bytes
+	ld a, h
+	ld [wBallVelY], a
+	ld a, e
+	ld [wBallVelY + 1], a
+	; Done with ball vel y
+	; Change ball x direction
 	ld a, 1
 	ld [wBallXDirection], a
 	; We shouldn't actually be below zero, so set pos x to zero
@@ -313,7 +358,8 @@ HandleBallMovement:
 	xor a
 	ld [wBallPos.x], a
 	ld [wBallPos.x + 1], a
-	jr .doneX
+	jr .y
+
 .right
 	; Low
 	ld a, [wBallPos.x]
@@ -326,9 +372,58 @@ HandleBallMovement:
 	; Did we go above screen width?
 	; Not checking overflow, the values won't be extreme enough
 	cp SCRN_X
-	jr c, .doneX ; a is less than
-	; TODO: Hit a paddle?
-	; For now we just assume we did and don't do the y vel change
+	jr c, .y ; a is less than
+
+	; Did we hit the right paddle?
+	; Get ball y - paddle top in hl
+	; Put paddle top in hl and deref hl
+	ld hl, wRightPaddlePos
+	ld a, [hl+]
+	ld h, [hl]
+	ld l, a
+	; Perform subtraction and put result in hl
+	ld a, [wBallPos.y]
+	sub l
+	ld l, a
+	ld a, [wBallPos.y + 1]
+	sbc h
+	ld h, a
+	; hl is now ballPos.y - leftPaddlePos
+	; Check its magnitude against paddle height (if negative, which is also a miss, it will be greater than)
+	ld bc, PADDLE_HEIGHT_NEGATIVE - 1 ; We are checking if hl <= PADDLE_HEIGHT with nc
+	push hl ; Used again if paddle is hit
+	add hl, bc
+	pop hl
+	jr nc, .hitPaddleRight
+
+	; Missed paddle
+	ld a, [wLeftScore]
+	inc a
+	; Don't increment over max value
+	jr nz, :+
+	ld a, $FF
+:
+	ld [wLeftScore], a
+	jp Serve
+
+.hitPaddleRight
+	; hl, which is where the ball y is on the paddle, can be used to get new ballVelY
+	; First we subtract paddle height half
+	ld bc, PADDLE_HEIGHT_HALF_NEGATIVE
+	add hl, bc
+	; Now we divide it by paddle height half (so it is from -1 to 1) and multiply by max ball velocity y magnitude in one multiplication
+	ld c, l
+	ld b, h
+	ld de, BALL_VELOCITY_Y_CALC_MULTIPLIER
+	call MulBcByDeInDehlSigned
+	; dehl: desired y velocity as 16.16 fixed point
+	; We only want the middle two bytes
+	ld a, h
+	ld [wBallVelY], a
+	ld a, e
+	ld [wBallVelY + 1], a
+	; Done with ball vel y
+	; Change ball direction
 	xor a
 	ld [wBallXDirection], a
 	; We shouldn't actually be above game width, so set pos x to it
@@ -336,8 +431,8 @@ HandleBallMovement:
 	ld [wBallPos.x], a
 	ld a, SCRN_X
 	ld [wBallPos.x + 1], a
-.doneX
 
+.y
 	; y
 	ld a, [wBallVelY + 1]
 	and 1 << 7 ; Check sign
