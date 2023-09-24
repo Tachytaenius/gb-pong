@@ -5,6 +5,12 @@ SECTION "Main Loop Variables", WRAM0
 wPaused:: ; boolean
 	ds 1
 
+wServed:: ; boolean
+	ds 1
+
+wServingFromWhoseLoss:: ; enum
+	ds 1
+
 wLeftScore:: ; 8 unsigned
 	ds 1
 wRightScore:: ; 8 unsigned
@@ -50,6 +56,11 @@ MainLoop::
 	ld a, [wPaused]
 	xor 1
 	ld [wPaused], a
+	; Randomise ball velocity with rDIV-set seed if we are unpausing for the first time
+	ld a, [wServed]
+	and a
+	jr nz, :+
+	call Serve ; wServed is set at the end of this routine
 :
 
 	ld a, [wPaused]
@@ -324,6 +335,8 @@ HandleBallMovement:
 	jr nc, .hitPaddleLeft
 
 	; Missed paddle
+	ld a, SERVING_LOSS_LEFT
+	ld [wServingFromWhoseLoss], a
 	ld a, [wRightScore]
 	inc a
 	; Don't increment over max value
@@ -388,7 +401,7 @@ HandleBallMovement:
 	ld a, [wBallPos.y + 1]
 	sbc h
 	ld h, a
-	; hl is now ballPos.y - leftPaddlePos
+	; hl is now ballPos.y - rightPaddlePos
 	; Check its magnitude against paddle height (if negative, which is also a miss, it will be greater than)
 	ld bc, PADDLE_HEIGHT_NEGATIVE - 1 ; We are checking if hl <= PADDLE_HEIGHT with nc
 	push hl ; Used again if paddle is hit
@@ -397,6 +410,8 @@ HandleBallMovement:
 	jr nc, .hitPaddleRight
 
 	; Missed paddle
+	ld a, SERVING_LOSS_RIGHT
+	ld [wServingFromWhoseLoss], a
 	ld a, [wLeftScore]
 	inc a
 	; Don't increment over max value
